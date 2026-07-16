@@ -1,0 +1,124 @@
+<div class="alerts-page">
+  <header class="page-header">
+    <div class="title-block">
+      <h1>Alerts & AI Settings</h1>
+      <p>Configure autonomous agents, adjust re-pricing speeds, and monitor active stock warnings</p>
+    </div>
+  </header>
+
+  <div class="alerts-layout">
+    <!-- Active Alerts Notification Center -->
+    <section class="alerts-section active-warnings">
+      <div class="card">
+        <div class="card-header">
+          <div class="header-title">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" class="warning-icon"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            <h4>Active System Warnings</h4>
+          </div>
+          <button class="btn btn-secondary btn-clear" *ngIf="activeAlerts.length > 0" (click)="clearAlerts()">
+            Clear Warnings
+          </button>
+        </div>
+
+        <div class="card-body">
+          <div class="empty-alerts" *ngIf="activeAlerts.length === 0">
+            <div class="check-icon">✓</div>
+            <h5>All Systems Nominal</h5>
+            <p>No active stock alerts or pricing pipeline warnings detected.</p>
+          </div>
+
+          <div class="alerts-list" *ngIf="activeAlerts.length > 0">
+            <div class="alert-item" *ngFor="let alert of activeAlerts">
+              <span class="warning-dot"></span>
+              <p class="alert-text">{{ alert }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- AI Autopilot Configuration Settings -->
+    <section class="alerts-section ai-settings">
+      <div class="card border-ai">
+        <div class="card-header border-ai">
+          <div class="header-title">
+            <span class="ai-badge">AI AGENT CONFIG</span>
+            <h4>Autopilot Controls</h4>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <!-- Switch 1: Pricing Autopilot -->
+          <div class="setting-row">
+            <div class="setting-info">
+              <h5>Autonomous Pricing</h5>
+              <p>Automatically adjust channel prices without human confirmation based on real-time competitor catalog swings and demand velocity signals.</p>
+            </div>
+            <div class="setting-action">
+              <label class="switch">
+                <input type="checkbox" [(ngModel)]="autopilotPricing" (change)="onAutopilotPricingChange()" />
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Switch 2: Restocking Autopilot -->
+          <div class="setting-row">
+            <div class="setting-info">
+              <h5>Autonomous Restocking</h5>
+              <p>Automatically sign off and dispatch restocking purchase orders drafted by the OpenClaw Restocking Agent without requiring manager approval.</p>
+            </div>
+            <div class="setting-action">
+              <label class="switch">
+                <input type="checkbox" [(ngModel)]="autopilotRestocking" (change)="onAutopilotRestockingChange()" />
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Range Slider: Pricing Evaluation Rate -->
+          <div class="setting-row slider-row" [class.disabled]="!autopilotPricing">
+            <div class="setting-info">
+              <h5>Autopilot Pricing Check Rate</h5>
+              <p>Configure how frequently (in seconds) the background AI sweeps competitor catalogs to adjust prices autonomously.</p>
+            </div>
+            <div class="setting-action slider-container">
+              <div class="slider-val-bubble">{{ autopilotIntervalSec }} seconds</div>
+              <input type="range" min="5" max="60" step="5" 
+                     [(ngModel)]="autopilotIntervalSec" 
+                     (change)="onIntervalChange()" 
+                     [disabled]="!autopilotPricing" />
+              <div class="range-labels">
+                <span>5s (Aggressive)</span>
+                <span>60s (Gradual)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Autopilot Sweep Logs -->
+      <div class="card logs-card" *ngIf="autopilotPricing">
+        <div class="card-header">
+          <h4>Autopilot Activity Logs (Live)</h4>
+          <span class="live-indicator"><span class="pulse"></span>Sweeping</span>
+        </div>
+        <div class="card-body logs-body">
+          <div class="empty-state" *ngIf="pricingDecisions.length === 0">
+            Awaiting background pricing swept updates...
+          </div>
+          <div class="log-stream" *ngIf="pricingDecisions.length > 0">
+            <div class="log-entry" *ngFor="let dec of pricingDecisions">
+              <div class="entry-meta">
+                <span class="time">{{ dec.timestamp | date:'HH:mm:ss' }}</span>
+                <span class="name">{{ dec.sku === 'PROD-001' ? 'Milk' : dec.sku === 'PROD-002' ? 'Rice' : dec.sku === 'PROD-003' ? 'Coke' : dec.sku === 'PROD-004' ? 'Bread' : 'Soap' }}</span>
+                <span class="badge">₹{{ dec.oldPrice }} → ₹{{ dec.newPrice }}</span>
+              </div>
+              <p class="justification">{{ dec.justification }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>

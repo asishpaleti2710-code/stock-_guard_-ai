@@ -1,0 +1,25 @@
+<!-- ── Video Intro Overlay ── -->
+<div class="intro-overlay" *ngIf="showIntro" [class.fading]="introFading">
+  <video
+    #introVideo
+    class="intro-video"
+    src="assets/intro.mp4"
+    playsinline
+    (ended)="onVideoEnded()"
+  ></video>
+
+  <!-- Skip button -->
+  <button class="btn-skip" (click)="skipIntro()">
+    Skip intro <span class="skip-arrow">›</span>
+  </button>
+</div>
+
+<!-- ── Welcome Card (shown after intro) ── -->
+<div class="welcome-page" *ngIf="!showIntro">
+  <div class="welcome-card">
+    <span class="eyebrow">Retail Intelligence Platform</span>
+    <h1>StockGuard</h1>
+    <p>Live inventory tracking, AI-driven pricing, and automated restocking — all in one dashboard.</p>
+    <button (click)="goToLogin()">Sign In to Continue →</button>
+  </div>
+</div>

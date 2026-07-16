@@ -1,0 +1,121 @@
+<div class="restocking-page">
+  <header class="page-header">
+    <div class="title-section">
+      <h1>AI Autonomous Restocking Center</h1>
+      <p>Configure auto-replenishment loops and monitor live stock shortages</p>
+    </div>
+
+    <!-- Autopilot toggle switch -->
+    <div class="autopilot-card" [class.active]="autopilotActive">
+      <div class="autopilot-info">
+        <div class="status-block">
+          <span class="pulse-dot" *ngIf="autopilotActive"></span>
+          <h4>AI Restocking Autopilot</h4>
+        </div>
+        <p>{{ autopilotActive ? 'Running background scans for stock shortages' : 'Awaiting manual manager trigger commands' }}</p>
+      </div>
+      <label class="switch">
+        <input type="checkbox" [checked]="autopilotActive" (change)="toggleAutopilot()" />
+        <span class="slider"></span>
+      </label>
+    </div>
+  </header>
+
+  <div class="restocking-grid">
+    <!-- Left Column: Shortages & Review Queue -->
+    <div class="left-column" style="display: flex; flex-direction: column; gap: 24px;">
+      <!-- Shortages Queue -->
+      <div class="queue-card">
+        <div class="card-header">
+          <h3>Shortages & Alert Queue</h3>
+          <span class="count-badge" [class.alert]="getLowStockProducts().length > 0">
+            {{ getLowStockProducts().length }} Items
+          </span>
+        </div>
+
+        <div class="card-body">
+          <div class="empty-state" *ngIf="getLowStockProducts().length === 0">
+            <div class="check-icon">✓</div>
+            <h4>No Stock Shortages</h4>
+            <p>All 15 products are fully stocked above safety threshold margins.</p>
+          </div>
+
+          <div class="shortages-list" *ngIf="getLowStockProducts().length > 0">
+            <div class="shortage-item" *ngFor="let p of getLowStockProducts()">
+              <div class="item-meta">
+                <span class="sku font-mono">{{ p.sku }}</span>
+                <span class="name">{{ p.productName }}</span>
+                <span class="category-badge">{{ p.category }}</span>
+              </div>
+
+              <div class="item-stats">
+                <div class="stat">
+                  <span class="lbl">Stock Level</span>
+                  <strong class="val text-danger">{{ p.stock }} units</strong>
+                </div>
+                <div class="stat">
+                  <span class="lbl">Threshold</span>
+                  <strong class="val">{{ p.reorderThreshold }} units</strong>
+                </div>
+                <div class="stat">
+                  <span class="lbl">Est. Runout</span>
+                  <strong class="val text-orange">{{ getDepletionDays(p) }}</strong>
+                </div>
+              </div>
+
+              <button class="btn btn-restock" (click)="triggerRestock(p.sku)">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" class="refresh-icon"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                Trigger Restock (500 Units)
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Awaiting Manager Review POs -->
+      <div class="queue-card po-review-card" *ngIf="getDraftedRequests().length > 0">
+        <div class="card-header">
+          <h3>Awaiting Manager PO Approval</h3>
+          <span class="count-badge alert">{{ getDraftedRequests().length }} POs</span>
+        </div>
+
+        <div class="card-body" style="padding: 16px 20px;">
+          <div class="po-review-list" style="display: flex; flex-direction: column; gap: 12px;">
+            <div class="po-review-item" *ngFor="let r of getDraftedRequests()" style="background: #fff8f5; border: 1px solid #ffe8cc; border-radius: 8px; padding: 14px; display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+              <div class="po-meta">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                  <strong style="color: #2c3e50; font-size: 14px;">{{ getProductName(r.sku) }}</strong>
+                  <span class="font-mono" style="font-size: 11px; color: #7f8c8d;">{{ r.sku }}</span>
+                </div>
+                <p style="margin: 0; font-size: 12px; color: #7f8c8d;">Quantity: <strong>{{ r.quantity }} units</strong> | Target Supplier: <strong>{{ r.supplier }}</strong></p>
+              </div>
+
+              <button class="btn btn-approve-restock" (click)="approvePO(r.sku)" style="background: #e65100; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.2s;">
+                Approve & Dispatch
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Autopilot Console -->
+    <div class="console-card">
+      <div class="card-header">
+        <h3>Autopilot Operation Logs</h3>
+        <button class="btn-clear" (click)="clearLogs()">Clear Console</button>
+      </div>
+
+      <div class="card-body">
+        <div class="console-terminal">
+          <div class="log-line" *ngFor="let log of restockingLogs" 
+               [class.system]="log.includes('System:')"
+               [class.autopilot]="log.includes('[AI Autopilot]')"
+               [class.manual]="log.includes('[Manual Trigger]')">
+            {{ log }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

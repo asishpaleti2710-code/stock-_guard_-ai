@@ -1,0 +1,207 @@
+<div class="po-page">
+  <!-- Page Title -->
+  <header class="page-header">
+    <div class="title-block">
+      <h1>Purchase Orders (OpenClaw Agents)</h1>
+      <p>Monitor and approve restocking orders drafted autonomously by AI restocking agents</p>
+    </div>
+  </header>
+
+  <!-- Empty State if no POs generated -->
+  <div class="empty-po-page" *ngIf="purchaseOrders.length === 0">
+    <div class="empty-icon">🤖</div>
+    <h3>No Purchase Orders Generated Yet</h3>
+    <p>AI restocking requests are automatically drafted by the OpenClaw agent when product stock falls below limits.</p>
+    <a href="/inventory" class="btn btn-primary">Go to Inventory & Run Simulation</a>
+  </div>
+
+  <!-- Main Split Layout -->
+  <div class="po-layout" *ngIf="purchaseOrders.length > 0">
+    
+    <!-- Left Column: List -->
+    <section class="po-list-section">
+      <div class="list-card">
+        <!-- List Header with Filters -->
+        <div class="list-filters">
+          <div class="filter-group">
+            <label>Status</label>
+            <select [(ngModel)]="statusFilter">
+              <option value="ALL">All Statuses</option>
+              <option value="DRAFTED">Drafted</option>
+              <option value="SENT">Sent to Supplier</option>
+              <option value="CONFIRMED">Fulfillment Confirmed</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label>Priority</label>
+            <select [(ngModel)]="priorityFilter">
+              <option value="ALL">All Priorities</option>
+              <option value="HIGH">High Priority</option>
+              <option value="NORMAL">Normal Priority</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- PO List Container -->
+        <div class="po-items-container">
+          <div class="empty-filtered-po" *ngIf="getFilteredPOs().length === 0">
+            No purchase orders match the selected filters.
+          </div>
+          
+          <div class="po-item" 
+               *ngFor="let po of getFilteredPOs()" 
+               [class.selected]="selectedPO === po" 
+               (click)="selectPO(po)">
+            <div class="item-header">
+              <span class="ref-num">Ref: PO-{{ po.timestamp | date:'mmss' }}</span>
+              <span class="priority-badge" [class.high]="po.sku === 'PROD-001' || po.sku === 'PROD-004'">
+                {{ po.sku === 'PROD-001' || po.sku === 'PROD-004' ? 'High' : 'Normal' }}
+              </span>
+            </div>
+
+            <div class="item-body">
+              <div class="prod-details">
+                <span class="name">{{ getProductName(po.sku) }}</span>
+                <span class="qty">{{ po.quantity }} units</span>
+              </div>
+              <span class="supplier">{{ po.supplier }}</span>
+            </div>
+
+            <div class="item-footer">
+              <span class="date">{{ po.timestamp | date:'shortTime' }}</span>
+              <span class="status-pill" [class.draft]="po.status === 'DRAFTED'" [class.sent]="po.status === 'SENT'" [class.confirmed]="po.status === 'CONFIRMED'">
+                {{ po.status === 'DRAFTED' ? 'Draft' : po.status === 'SENT' ? 'Sent' : 'Confirmed' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Column: Document Preview Sheet -->
+    <section class="po-preview-section">
+      <!-- Fallback if none selected -->
+      <div class="no-selection-card" *ngIf="!selectedPO">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#bdc3c7" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+        <p>Select a purchase order from the list to view its AI-drafted document contract.</p>
+      </div>
+
+      <!-- Preview Sheet Card -->
+      <div class="po-sheet-card" *ngIf="selectedPO">
+        <div class="sheet-actions" *ngIf="selectedPO.status === 'SENT'">
+          <div class="delivery-prompt">
+            <span class="info-icon">i</span>
+            <span>Items have been dispatched. Confirm physical inventory delivery.</span>
+          </div>
+          <button class="btn btn-confirm-receipt" (click)="approvePO(selectedPO)">
+            Confirm Delivery & Stock replenishment
+          </button>
+        </div>
+
+        <!-- Document Sheet Layout -->
+        <div class="po-document">
+          <!-- Stamp Overlay -->
+          <div class="doc-stamp" [class.draft]="selectedPO.status === 'DRAFTED'" [class.sent]="selectedPO.status === 'SENT'" [class.confirmed]="selectedPO.status === 'CONFIRMED'">
+            {{ selectedPO.status }}
+          </div>
+
+          <div class="doc-header">
+            <div class="brand-block">
+              <span class="brand">StockGuard Retail</span>
+              <span class="tag">Autonomous Restocking Sheet</span>
+            </div>
+            <div class="doc-title-block">
+              <h2>PURCHASE ORDER</h2>
+              <span class="ref">REF: PO-{{ selectedPO.timestamp | date:'mmss' }}</span>
+            </div>
+          </div>
+
+          <div class="doc-meta-grid">
+            <div class="meta-item">
+              <span class="label">Date Created</span>
+              <span class="val">{{ selectedPO.timestamp | date:'mediumDate' }} {{ selectedPO.timestamp | date:'shortTime' }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="label">Prepared By</span>
+              <span class="val accent">OpenClaw RESTOCK Agent</span>
+            </div>
+            <div class="meta-item">
+              <span class="label">Delivery Term</span>
+              <span class="val">DDP Store #101 Warehouse</span>
+            </div>
+          </div>
+
+          <hr class="doc-divider" />
+
+          <div class="doc-addresses">
+            <div class="address-box">
+              <span class="heading">Buyer Address</span>
+              <span class="line font-semibold">StockGuard Retail Inc.</span>
+              <span class="line">Store #101 Warehouse, Dock B</span>
+              <span class="line">Electronic City, Phase 1</span>
+              <span class="line">Bengaluru, KA 560100</span>
+            </div>
+
+            <div class="address-box">
+              <span class="heading">Supplier Address</span>
+              <span class="line font-semibold">{{ selectedPO.supplier }}</span>
+              <span class="line">Logistics hub 14A, Cargo Rd</span>
+              <span class="line">Anekal Industrial Area</span>
+              <span class="line">Bengaluru, KA 562106</span>
+            </div>
+          </div>
+
+          <table class="doc-items-table">
+            <thead>
+              <tr>
+                <th>Item Code (SKU)</th>
+                <th>Description</th>
+                <th class="text-right">Qty</th>
+                <th class="text-right">Unit Cost</th>
+                <th class="text-right">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="font-mono">{{ selectedPO.sku }}</td>
+                <td>{{ getProductName(selectedPO.sku) }} restocking delivery batch</td>
+                <td class="text-right font-semibold">{{ selectedPO.quantity }}</td>
+                <td class="text-right">₹{{ getProductBasePrice(selectedPO.sku) * 0.95 | number:'1.0-0' }}</td>
+                <td class="text-right font-semibold">₹{{ getProductBasePrice(selectedPO.sku) * 0.95 * selectedPO.quantity | number:'1.0-0' }}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="doc-totals">
+            <div class="totals-block">
+              <div class="total-row">
+                <span>Subtotal:</span>
+                <span>₹{{ getProductBasePrice(selectedPO.sku) * 0.95 * selectedPO.quantity | number:'1.0-0' }}</span>
+              </div>
+              <div class="total-row">
+                <span>GST (18%):</span>
+                <span>₹{{ getProductBasePrice(selectedPO.sku) * 0.95 * selectedPO.quantity * 0.18 | number:'1.0-0' }}</span>
+              </div>
+              <hr />
+              <div class="total-row grand-total">
+                <span>Total Due:</span>
+                <span>₹{{ getProductBasePrice(selectedPO.sku) * 0.95 * selectedPO.quantity * 1.18 | number:'1.0-0' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="doc-terms">
+            <h5>Terms & Conditions:</h5>
+            <ol>
+              <li>Delivery must be completed within 24-48 hours from dispatch status.</li>
+              <li>Damaged items must be reported immediately and will void corresponding line cost.</li>
+              <li>This contract is automatically signed and drafted by StockGuard AI Agent.</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>

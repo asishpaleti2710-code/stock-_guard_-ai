@@ -1,0 +1,20 @@
+<div class="login-page">
+  <form class="login-card" (ngSubmit)="onSubmit()">
+    <span class="eyebrow">StockGuard</span>
+    <h1>Store Manager Login</h1>
+
+    <label>
+      Username
+      <input type="text" name="username" [(ngModel)]="username" placeholder="e.g. manager01" />
+    </label>
+
+    <label>
+      Password
+      <input type="password" name="password" [(ngModel)]="password" placeholder="••••••••" />
+    </label>
+
+    <p class="error" *ngIf="errorMessage">{{ errorMessage }}</p>
+
+    <button type="submit">Sign In</button>
+  </form>
+</div>

@@ -1,0 +1,72 @@
+<div class="app-shell">
+  <header class="navbar">
+    <div class="navbar__left">
+      <span class="navbar__brand">STOCKGUARD</span>
+      <nav class="navbar__links">
+        <a routerLink="/dashboard" routerLinkActive="active">Dashboard</a>
+        <a routerLink="/inventory" routerLinkActive="active">Inventory</a>
+        <a routerLink="/alerts" routerLinkActive="active">Alerts</a>
+        <a routerLink="/purchase-requests" routerLinkActive="active">Purchase Requests</a>
+        <a routerLink="/restocking" routerLinkActive="active">AI Restocking</a>
+      </nav>
+    </div>
+
+    <div class="navbar__right">
+      <span class="navbar__avatar">{{ auth.getUsername()?.charAt(0)?.toUpperCase() }}</span>
+      <span class="navbar__username">{{ auth.getUsername() }}</span>
+      <button class="navbar__signout" (click)="onSignOut()">Sign Out</button>
+    </div>
+  </header>
+
+  <main class="content">
+    <router-outlet></router-outlet>
+  </main>
+
+  <!-- Stoksy Floating AI Chat Assistant -->
+  <div class="stoksy-assistant">
+    <!-- Chat toggle button -->
+    <button class="stoksy-bubble" (click)="toggleChat()" [class.active]="isChatOpen">
+      <span class="icon">🤖</span>
+      <span class="lbl" *ngIf="!isChatOpen">Ask Stoksy</span>
+      <span class="lbl" *ngIf="isChatOpen">Close</span>
+    </button>
+
+    <!-- Chat Drawer Panel -->
+    <div class="stoksy-panel" *ngIf="isChatOpen">
+      <div class="panel-header">
+        <div class="avatar-block">
+          <span class="bot-avatar">🤖</span>
+          <div>
+            <h4>Stoksy</h4>
+            <span class="sub">AI Inventory Copilot • Online</span>
+          </div>
+        </div>
+        <button class="btn-close-pane" (click)="toggleChat()">×</button>
+      </div>
+
+      <div class="panel-body" id="stoksy-chat-messages">
+        <div class="chat-message" *ngFor="let msg of messages" [class.user]="msg.sender === 'user'" [class.bot]="msg.sender === 'stoksy'">
+          <div class="msg-bubble">
+            <span class="msg-text" style="white-space: pre-line;">{{ msg.text }}</span>
+          </div>
+          <span class="msg-time">{{ msg.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }}</span>
+        </div>
+      </div>
+
+      <!-- Quick suggestions list -->
+      <div class="panel-suggestions">
+        <button class="btn-suggest" (click)="sendMessage('Which items are low stock?')">📋 Check Low Stock</button>
+        <button class="btn-suggest" (click)="sendMessage('Are there pending POs?')">📦 Restock Queue</button>
+        <button class="btn-suggest" (click)="sendMessage('Is pricing autopilot enabled?')">💰 Pricing Updates</button>
+      </div>
+
+      <div class="panel-input">
+        <input type="text" #chatInput placeholder="Type a message & press Enter..." 
+               (keydown.enter)="sendMessage(chatInput.value); chatInput.value=''" />
+        <button class="btn-send" (click)="sendMessage(chatInput.value); chatInput.value=''">
+          Send
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

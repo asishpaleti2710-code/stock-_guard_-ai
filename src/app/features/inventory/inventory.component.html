@@ -1,0 +1,516 @@
+<div class="inventory-page">
+  <!-- Main Content Area -->
+  <div class="inventory-main">
+    <header class="page-header">
+      <div class="title-section">
+        <h1>Products & Inventory</h1>
+        <p>Manage store catalogs, optimize margins, and run demand spikes simulations</p>
+      </div>
+
+      <div class="filter-bar">
+        <div class="search-input">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="text" [(ngModel)]="searchQuery" placeholder="Search product SKU or name..." />
+        </div>
+
+        <select class="category-select" [(ngModel)]="selectedCategory">
+          <option *ngFor="let cat of categories" [value]="cat">{{ cat }}</option>
+        </select>
+      </div>
+    </header>
+
+    <!-- Product Grid/Table -->
+    <div class="table-container">
+      <table class="inventory-table">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Product</th>
+            <th>Category</th>
+            <th>Stock Level</th>
+            <th>7-Day Avg Sales</th>
+            <th>Simulated Sales</th>
+            <th>Sales Increase</th>
+            <th>Demand Status</th>
+            <th>Current Price</th>
+            <th>Restock Threshold</th>
+            <th>Last Updated By</th>
+            <th class="actions-header">Simulation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let prod of getFilteredProducts()" 
+              [class.simulating]="simState.activeSku === prod.sku"
+              [class.selected]="selectedProduct?.sku === prod.sku">
+            <td class="sku-cell clickable-cell" (click)="selectProduct(prod)">{{ prod.sku }}</td>
+            <td class="name-cell clickable-cell" (click)="selectProduct(prod)">
+              <div class="prod-info">
+                <span class="prod-name">{{ prod.productName }}</span>
+                <span class="store-id">{{ prod.storeId }}</span>
+              </div>
+            </td>
+            <td class="clickable-cell" (click)="selectProduct(prod)"><span class="category-badge">{{ prod.category }}</span></td>
+            <td class="clickable-cell" (click)="selectProduct(prod)">
+              <div class="stock-display">
+                <span class="stock-count" [class.low]="prod.stock <= prod.reorderThreshold" [class.empty]="prod.stock === 0">
+                  {{ prod.stock }} units
+                </span>
+                <span class="status-pill" 
+                      [class.in-stock]="prod.stock > prod.reorderThreshold"
+                      [class.low-stock]="prod.stock > 0 && prod.stock <= prod.reorderThreshold"
+                      [class.out-of-stock]="prod.stock === 0">
+                  {{ prod.stock === 0 ? 'Out of Stock' : prod.stock <= prod.reorderThreshold ? 'Low Stock' : 'In Stock' }}
+                </span>
+              </div>
+            </td>
+            <td class="clickable-cell" (click)="selectProduct(prod)">{{ prod.avgSales7Days }} /day</td>
+            <td class="clickable-cell font-semibold" (click)="selectProduct(prod)">{{ prod.todaySalesUnits }} /day</td>
+            <td class="clickable-cell" (click)="selectProduct(prod)">
+              <span class="spike-badge" [class]="getSpikeClass(prod)">{{ getSpikePercentage(prod) >= 0 ? '+' : '' }}{{ getSpikePercentage(prod) }}%</span>
+            </td>
+            <td class="clickable-cell" (click)="selectProduct(prod)">
+              <span class="spike-pill" [class]="getSpikeClass(prod)">
+                {{ getSpikeLabel(prod) }}
+              </span>
+            </td>
+            <td class="price-cell clickable-cell" (click)="selectProduct(prod)">₹{{ prod.currentPrice }}</td>
+            <td class="clickable-cell" (click)="selectProduct(prod)">{{ prod.reorderThreshold }} units</td>
+            <td class="clickable-cell" (click)="selectProduct(prod)">
+              <span class="updated-by-badge" [class.ai]="prod.lastUpdatedBy === 'AI'">
+                {{ prod.lastUpdatedBy }}
+              </span>
+            </td>
+            <td class="actions-cell">
+              <button class="btn btn-simulate" 
+                      *ngIf="simState.activeSku !== prod.sku" 
+                      [disabled]="simState.activeSku !== null"
+                      (click)="startSalesSimulation(prod.sku); $event.stopPropagation()">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" class="play-icon"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                Simulate Sales Spike
+              </button>
+              <div class="sim-pill" *ngIf="simState.activeSku === prod.sku">
+                <span class="pulse-dot"></span>
+                <span>Active</span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Interactive Simulation Drawer -->
+  <aside class="simulation-drawer" *ngIf="simState.activeSku !== null">
+    <div class="drawer-header">
+      <div class="title-block">
+        <span class="badge">SIMULATOR BOARD</span>
+        <h3>Simulation: {{ getActiveProduct()?.productName }}</h3>
+      </div>
+      <button class="btn-close" (click)="cancelSimulation()">×</button>
+    </div>
+
+    <!-- Progress Tracker -->
+    <div class="drawer-progress">
+      <div class="progress-info">
+        <span>Step {{ simState.step }} of 8</span>
+        <span>{{ simState.progress }}% Complete</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-bar" [style.width.%]="simState.progress"></div>
+      </div>
+    </div>
+
+    <!-- Control Buttons -->
+    <div class="drawer-controls">
+      <button class="btn btn-primary btn-advance" 
+              [disabled]="simState.step === 8 || simState.step === 7 || autoAdvance" 
+              (click)="advanceStep()">
+        Advance Step →
+      </button>
+
+      <div class="toggle-control">
+        <label class="switch">
+          <input type="checkbox" [checked]="autoAdvance" (change)="toggleAutoAdvance()" />
+          <span class="slider"></span>
+        </label>
+        <span class="toggle-label">Auto-Advance Steps</span>
+      </div>
+    </div>
+
+    <!-- Simulation Dashboard Status Card -->
+    <div class="simulation-dashboard-card" *ngIf="simState.activeSku !== null">
+      <div class="sim-dash-header">
+        <span class="label">Simulated Demand Status</span>
+        <span class="spike-pill" [class]="simState.alertStatus?.toLowerCase()">
+          {{ simState.alertStatus }}
+        </span>
+      </div>
+      
+      <div class="sim-dash-grid">
+        <div class="sim-dash-item">
+          <span class="lbl">Sales Spike</span>
+          <strong class="val">{{ simState.salesIncreasePct }}%</strong>
+        </div>
+        <div class="sim-dash-item">
+          <span class="lbl">Simulated Sales</span>
+          <strong class="val">{{ simState.simulatedSalesRate }} /day</strong>
+        </div>
+        <div class="sim-dash-item">
+          <span class="lbl">Remaining Stock</span>
+          <strong class="val">{{ getActiveProduct()?.stock }} Units</strong>
+        </div>
+        <div class="sim-dash-item">
+          <span class="lbl">Est. Stock Out</span>
+          <strong class="val text-danger">{{ simState.daysToStockout }} Days</strong>
+        </div>
+        <div class="sim-dash-item">
+          <span class="lbl">Rec. Reorder</span>
+          <strong class="val text-primary">{{ simState.recommendedReorderQty }} Units</strong>
+        </div>
+        <div class="sim-dash-item">
+          <span class="lbl">Warehouse Source</span>
+          <strong class="val">{{ simState.warehouseSource }}</strong>
+        </div>
+      </div>
+
+      <!-- AI Summary box -->
+      <div class="sim-ai-summary">
+        <h5>AI Analysis Summary</h5>
+        <p>{{ simState.aiSummaryText }}</p>
+      </div>
+    </div>
+
+    <!-- Active Step Focus Cards -->
+    <div class="step-card-container">
+      <!-- Step 3: AI Price Recommendation -->
+      <div class="step-card pricing-card" *ngIf="simState.step === 3 && simState.competitorPrices">
+        <div class="card-title">LangChain4j + Nous Hermes pricing recommendations:</div>
+        <div class="competitor-grid">
+          <div class="comp-box">
+            <span class="store">Store A</span>
+            <span class="price">₹{{ simState.competitorPrices.storeA }}</span>
+          </div>
+          <div class="comp-box">
+            <span class="store">Store B</span>
+            <span class="price">₹{{ simState.competitorPrices.storeB }}</span>
+          </div>
+          <div class="comp-box">
+            <span class="store">Store C</span>
+            <span class="price">₹{{ simState.competitorPrices.storeC }}</span>
+          </div>
+        </div>
+        <div class="rec-price-box">
+          <span class="label">AI Recommended Price</span>
+          <span class="rec-price">₹{{ simState.recommendedPrice }}</span>
+        </div>
+      </div>
+
+      <!-- Step 4: DynamoDB Updated -->
+      <div class="step-card update-card" *ngIf="simState.step === 4">
+        <div class="success-message">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#1e40af" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          <div>
+            <h5>Price Updated Successfully</h5>
+            <p>Database updated from ₹{{ getActiveProduct()?.basePrice }} to ₹{{ simState.recommendedPrice }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 7: Manager Approval Card -->
+      <div class="step-card approval-card" *ngIf="simState.step === 7 && simState.draftedRequest">
+        <div class="po-details">
+          <h4>Restocking Order Review Required</h4>
+          <div class="detail-row"><span>Supplier:</span> <strong>{{ simState.draftedRequest.supplier }}</strong></div>
+          <div class="detail-row"><span>Quantity:</span> <strong>{{ simState.draftedRequest.quantity }} units</strong></div>
+          <div class="detail-row"><span>Priority:</span> <strong class="priority-high">HIGH PRIORITY</strong></div>
+          <div class="detail-row"><span>Status:</span> <strong class="status-draft">READY TO SEND</strong></div>
+          
+          <div class="doc-preview">
+            <pre>{{ simState.draftedRequest.draftDocText }}</pre>
+          </div>
+
+          <div class="action-buttons">
+            <button class="btn btn-approve" (click)="approvePO()">Approve Restock</button>
+            <button class="btn btn-reject" (click)="rejectPO()">Reject</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 8: Complete PO Sent -->
+      <div class="step-card success-card" *ngIf="simState.step === 8">
+        <div class="order-sent-message">
+          <div class="success-icon">✓</div>
+          <h4>Order Sent to Supplier</h4>
+          <p>The Restocking Purchase Order has been successfully sent to supplier. Expected delivery in 24 hours.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8-Step Flow Chart Visualizer -->
+    <div class="flowchart-visualizer">
+      <h4>Pipeline Flowchart</h4>
+      <div class="flowchart-steps">
+        <!-- Step 1 -->
+        <div class="flow-step" 
+             [class.active]="simState.step === 1" 
+             [class.completed]="simState.step > 1"
+             [class.pending]="simState.step < 1">
+          <div class="step-num">1</div>
+          <div class="step-info">
+            <h5>Sales Stream (Kinesis)</h5>
+            <p>Captures live transaction streams</p>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="flow-step" 
+             [class.active]="simState.step === 2" 
+             [class.completed]="simState.step > 2"
+             [class.pending]="simState.step < 2">
+          <div class="step-num">2</div>
+          <div class="step-info">
+            <h5>Spring Boot Processing</h5>
+            <p>Ingests stream, matches velocity thresholds</p>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="flow-step" 
+             [class.active]="simState.step === 3" 
+             [class.completed]="simState.step > 3"
+             [class.pending]="simState.step < 3">
+          <div class="step-num">3</div>
+          <div class="step-info">
+            <h5>AI Analysis (Nous Hermes)</h5>
+            <p>LangChain4j price optimizations</p>
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="flow-step" 
+             [class.active]="simState.step === 4" 
+             [class.completed]="simState.step > 4"
+             [class.pending]="simState.step < 4">
+          <div class="step-num">4</div>
+          <div class="step-info">
+            <h5>Update Price (DynamoDB)</h5>
+            <p>Saves pricing changes directly to DB</p>
+          </div>
+        </div>
+
+        <!-- Step 5 -->
+        <div class="flow-step" 
+             [class.active]="simState.step === 5" 
+             [class.completed]="simState.step > 5"
+             [class.pending]="simState.step < 5">
+          <div class="step-num">5</div>
+          <div class="step-info">
+            <h5>Low Stock Detection</h5>
+            <p>Triggers restock scanning</p>
+          </div>
+        </div>
+
+        <!-- Step 6 -->
+        <div class="flow-step" 
+             [class.active]="simState.step === 6" 
+             [class.completed]="simState.step > 6"
+             [class.pending]="simState.step < 6">
+          <div class="step-num">6</div>
+          <div class="step-info">
+            <h5>OpenClaw Restock Agent</h5>
+            <p>AI Agent auto-drafts supplier request</p>
+          </div>
+        </div>
+
+        <!-- Step 7 -->
+        <div class="flow-step" 
+             [class.active]="simState.step === 7" 
+             [class.completed]="simState.step > 7"
+             [class.pending]="simState.step < 7">
+          <div class="step-num">7</div>
+          <div class="step-info">
+            <h5>Manager Approval</h5>
+            <p>Requires supervisor confirmation</p>
+          </div>
+        </div>
+
+        <!-- Step 8 -->
+        <div class="flow-step" 
+             [class.active]="simState.step === 8" 
+             [class.completed]="simState.step > 8"
+             [class.pending]="simState.step < 8">
+          <div class="step-num">8</div>
+          <div class="step-info">
+            <h5>Order Sent to Supplier</h5>
+            <p>Dispatched for immediate restocking</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Terminal logs console -->
+    <div class="simulation-logs">
+      <div class="logs-header">
+        <span>LOG CONSOLE</span>
+        <button class="btn-clear-logs" (click)="simState.logs = []">Clear</button>
+      </div>
+      <div class="logs-terminal">
+        <div class="log-line" *ngFor="let log of simState.logs">{{ log }}</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Product Details Drawer -->
+  <aside class="simulation-drawer details-drawer" *ngIf="selectedProduct !== null">
+    <div class="drawer-header">
+      <div class="title-block">
+        <span class="badge">PRODUCT FILE</span>
+        <h3>{{ selectedProduct.productName }}</h3>
+        <span class="sku-subtitle">SKU: {{ selectedProduct.sku }}</span>
+      </div>
+      <button class="btn-close" (click)="closeProductDetails()">×</button>
+    </div>
+
+    <!-- Core Details Grid -->
+    <div class="details-section">
+      <h4>Inventory Summary</h4>
+      
+      <div class="info-card">
+        <div class="detail-row"><span>Category:</span> <strong>{{ selectedProduct.category }}</strong></div>
+        <div class="detail-row"><span>Warehouse Location:</span> <strong>Aisle A-{{ selectedProduct.sku.substring(5) }}, Bin B-12</strong></div>
+        <div class="detail-row"><span>Store ID:</span> <strong>{{ selectedProduct.storeId }}</strong></div>
+        <div class="detail-row"><span>Replenish Status:</span> 
+          <strong class="status-pill" 
+                  [class.in-stock]="selectedProduct.stock > selectedProduct.reorderThreshold"
+                  [class.low-stock]="selectedProduct.stock > 0 && selectedProduct.stock <= selectedProduct.reorderThreshold"
+                  [class.out-of-stock]="selectedProduct.stock === 0">
+            {{ selectedProduct.stock === 0 ? 'Out of Stock' : selectedProduct.stock <= selectedProduct.reorderThreshold ? 'Low Stock' : 'In Stock' }}
+          </strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Demand Spike Detection -->
+    <div class="details-section">
+      <h4>Demand Spike Detection</h4>
+      
+      <div class="info-card">
+        <div class="detail-row"><span>7-Day Average Sales:</span> <strong>{{ selectedProduct.avgSales7Days }} units/day</strong></div>
+        <div class="detail-row"><span>Today's Sales Count:</span> <strong>{{ selectedProduct.todaySalesUnits }} units</strong></div>
+        <div class="detail-row"><span>Sales Velocity Increase:</span> 
+          <strong [class.red-text]="getSpikeClass(selectedProduct) === 'critical'"
+                  [class.orange-text]="getSpikeClass(selectedProduct) === 'spike'"
+                  [class.yellow-text]="getSpikeClass(selectedProduct) === 'monitor'"
+                  [class.green-text]="getSpikeClass(selectedProduct) === 'normal'">
+            +{{ getSpikePercentage(selectedProduct) }}%
+          </strong>
+        </div>
+        <div class="detail-row"><span>Spike Classification:</span> 
+          <span class="spike-pill" [class]="getSpikeClass(selectedProduct)">
+            {{ getSpikeLabel(selectedProduct) }}
+          </span>
+        </div>
+        
+        <!-- Runout Check -->
+        <div class="runout-warning-box" [class.danger]="getDaysToRunout(selectedProduct) <= 2">
+          <div class="warning-title">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" class="warning-icon"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            <span>Estimated Stock Runout</span>
+          </div>
+          <p class="warning-desc">
+            Based on current velocity of <strong>{{ selectedProduct.todaySalesUnits }} units/day</strong>, remaining stock of <strong>{{ selectedProduct.stock }} units</strong> will deplete in <strong>{{ getDaysToRunout(selectedProduct) }} days</strong>.
+          </p>
+          <div class="restock-rec" *ngIf="getDaysToRunout(selectedProduct) <= 2">
+            ⚠️ <strong>ALERT:</strong> Recommended immediate replenishment required (Threshold: 2.0 days).
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pricing Analytics -->
+    <div class="details-section">
+      <h4>Margin & Pricing Analysis</h4>
+      
+      <div class="info-card margin-card">
+        <div class="price-split">
+          <div class="price-val">
+            <span class="lbl">Retail Price</span>
+            <span class="val">₹{{ selectedProduct.currentPrice }}</span>
+          </div>
+          <div class="price-val">
+            <span class="lbl">Base Cost</span>
+            <span class="val cost">₹{{ selectedProduct.basePrice }}</span>
+          </div>
+          <div class="price-val">
+            <span class="lbl">Gross Margin</span>
+            <span class="val margin">{{ round(((selectedProduct.currentPrice - selectedProduct.basePrice)/selectedProduct.currentPrice)*100) }}%</span>
+          </div>
+        </div>
+        <div class="price-calc-hint">
+          * AI pricing algorithm targets an optimized gross margin of 20% to 35% relative to competitor retail variations.
+        </div>
+      </div>
+    </div>
+
+    <!-- Stock Threshold Progress -->
+    <div class="details-section">
+      <h4>Threshold Tracking</h4>
+      <div class="info-card">
+        <div class="stock-progress-block">
+          <div class="stock-labels">
+            <span>Stock Count: <strong>{{ selectedProduct.stock }} units</strong></span>
+            <span>Threshold: <strong>{{ selectedProduct.reorderThreshold }} units</strong></span>
+          </div>
+          <div class="stock-progress-track">
+            <!-- Green if safe, Orange if below threshold -->
+            <div class="stock-progress-fill" 
+                 [style.width.%]="min(100, (selectedProduct.stock / (selectedProduct.reorderThreshold * 2)) * 100)"
+                 [class.warning]="selectedProduct.stock <= selectedProduct.reorderThreshold"
+                 [class.empty]="selectedProduct.stock === 0"></div>
+          </div>
+          <div class="stock-legend">
+            <span>0</span>
+            <span>{{ selectedProduct.reorderThreshold }} (Restock Trigger)</span>
+            <span>{{ selectedProduct.reorderThreshold * 2 }}+</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Pricing History Timeline -->
+    <div class="details-section pricing-history-section">
+      <h4>Repricing History Timeline</h4>
+      
+      <div class="timeline-empty" *ngIf="getSelectedProductDecisions().length === 0">
+        No price decisions recorded for this SKU. Use <strong>Spike Sales</strong> or wait for background Autopilot sweeps.
+      </div>
+      
+      <div class="pricing-timeline" *ngIf="getSelectedProductDecisions().length > 0">
+        <div class="timeline-entry" *ngFor="let dec of getSelectedProductDecisions()">
+          <div class="entry-dot"></div>
+          <div class="entry-content">
+            <div class="entry-header">
+              <span class="price-change">₹{{ dec.oldPrice }} → ₹{{ dec.newPrice }}</span>
+              <span class="date">{{ dec.timestamp | date:'shortTime' }}</span>
+            </div>
+            <div class="entry-signal">
+              <span>Trigger:</span> <strong class="badge">{{ dec.demandSignal }}</strong>
+            </div>
+            <p class="entry-desc">{{ dec.justification }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Restock Policy Info -->
+    <div class="details-section">
+      <h4>Restocking Supplier Rules</h4>
+      <div class="info-card">
+        <div class="detail-row"><span>Target Supplier:</span> <strong>{{ selectedProduct.sku === 'PROD-001' || selectedProduct.sku === 'PROD-004' || selectedProduct.sku === 'PROD-006' || selectedProduct.sku === 'PROD-007' ? 'ABC Distributors Ltd' : selectedProduct.sku === 'PROD-003' || selectedProduct.sku === 'PROD-010' || selectedProduct.sku === 'PROD-011' ? 'Beverage Supply Corp' : 'FreshCo Retail Partners' }}</strong></div>
+        <div class="detail-row"><span>Auto-Reorder Quantity:</span> <strong>500 units</strong></div>
+        <div class="detail-row"><span>Priority Ranking:</span> <strong [class.red-text]="selectedProduct.sku === 'PROD-001' || selectedProduct.sku === 'PROD-004'">{{ selectedProduct.sku === 'PROD-001' || selectedProduct.sku === 'PROD-004' ? 'HIGH (Crucial Item)' : 'NORMAL' }}</strong></div>
+        <div class="detail-row"><span>Supplier Lead Time:</span> <strong>24 hours</strong></div>
+      </div>
+    </div>
+  </aside>
+</div>

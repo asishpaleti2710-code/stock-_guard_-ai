@@ -1,0 +1,386 @@
+<div class="dashboard">
+  <!-- Header -->
+  <header class="dashboard__header">
+    <div class="header-title">
+      <h1>Dashboard Overview</h1>
+      <p class="subtitle">Real-time inventory analysis & AI pricing streams</p>
+    </div>
+    
+    <div class="autopilot-status" [class.active]="simService.autopilotPricing">
+      <span class="pulse-dot"></span>
+      <span class="status-text">AI Autopilot Pricing: {{ simService.autopilotPricing ? 'ACTIVE' : 'INACTIVE' }}</span>
+    </div>
+  </header>
+
+  <!-- KPI Cards -->
+  <section class="dashboard__kpis">
+    <div class="kpi-card interactive-card" (click)="openModal('products')">
+      <div class="kpi-card__icon product-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+      </div>
+      <div class="kpi-card__content">
+        <span class="label">Total Products</span>
+        <h3 class="value">{{ totalProducts }}</h3>
+      </div>
+    </div>
+
+    <div class="kpi-card interactive-card" (click)="openModal('sales')">
+      <div class="kpi-card__icon sales-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+      </div>
+      <div class="kpi-card__content">
+        <span class="label">Today's Sales</span>
+        <h3 class="value">₹{{ todaySales | number }}</h3>
+      </div>
+    </div>
+
+    <div class="kpi-card interactive-card" [class.warning]="lowStockCount > 0" (click)="openModal('alerts')">
+      <div class="kpi-card__icon alert-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+      </div>
+      <div class="kpi-card__content">
+        <span class="label">Low Stock Alerts</span>
+        <h3 class="value">{{ lowStockCount }}</h3>
+      </div>
+    </div>
+
+    <div class="kpi-card interactive-card info" (click)="openModal('pricing')">
+      <div class="kpi-card__icon price-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+      </div>
+      <div class="kpi-card__content">
+        <span class="label">AI Price Changes</span>
+        <h3 class="value">{{ priceChangesCount }}</h3>
+      </div>
+    </div>
+  </section>
+
+  <!-- Charts Row -->
+  <section class="dashboard__charts">
+    <!-- Sales Chart -->
+    <div class="chart-container sales-overview">
+      <div class="chart-header">
+        <h4>Sales Overview (Today)</h4>
+        <div class="time-range">Live Stream</div>
+      </div>
+      
+      <div class="chart-body">
+        <div class="svg-wrapper">
+          <svg viewBox="0 0 600 220" class="line-chart">
+            <defs>
+              <linearGradient id="chart-area-grad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#2563eb" stop-opacity="0.25" />
+                <stop offset="100%" stop-color="#2563eb" stop-opacity="0.0" />
+              </linearGradient>
+            </defs>
+            
+            <!-- Grid Lines -->
+            <line x1="50" y1="40" x2="550" y2="40" stroke="#f1f3f7" stroke-width="1" />
+            <line x1="50" y1="90" x2="550" y2="90" stroke="#f1f3f7" stroke-width="1" />
+            <line x1="50" y1="140" x2="550" y2="140" stroke="#f1f3f7" stroke-width="1" />
+            <line x1="50" y1="180" x2="550" y2="180" stroke="#eef1f5" stroke-width="2" />
+            
+            <!-- Area path -->
+            <path d="M 50,180 L 50,145 L 133,155 L 216,120 L 300,45 L 383,85 L 466,65 L 550,110 L 550,180 Z" fill="url(#chart-area-grad)" />
+            
+            <!-- Line path -->
+            <path d="M 50,145 L 133,155 L 216,120 L 300,45 L 383,85 L 466,65 L 550,110" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+            
+            <!-- Data Points -->
+            <circle cx="50" cy="145" r="4" class="chart-point" (mouseenter)="showSalesTooltip(0)" (mouseleave)="hideSalesTooltip()" />
+            <circle cx="133" cy="155" r="4" class="chart-point" (mouseenter)="showSalesTooltip(1)" (mouseleave)="hideSalesTooltip()" />
+            <circle cx="216" cy="120" r="4" class="chart-point" (mouseenter)="showSalesTooltip(2)" (mouseleave)="hideSalesTooltip()" />
+            <circle cx="300" cy="45" r="4" class="chart-point" (mouseenter)="showSalesTooltip(3)" (mouseleave)="hideSalesTooltip()" />
+            <circle cx="383" cy="85" r="4" class="chart-point" (mouseenter)="showSalesTooltip(4)" (mouseleave)="hideSalesTooltip()" />
+            <circle cx="466" cy="65" r="4" class="chart-point" (mouseenter)="showSalesTooltip(5)" (mouseleave)="hideSalesTooltip()" />
+            <circle cx="550" cy="110" r="4" class="chart-point" (mouseenter)="showSalesTooltip(6)" (mouseleave)="hideSalesTooltip()" />
+            
+            <!-- Interactive Hover overlays -->
+            <rect x="30" y="20" width="40" height="170" fill="transparent" class="hover-trigger" (mouseenter)="showSalesTooltip(0)" (mouseleave)="hideSalesTooltip()" />
+            <rect x="113" y="20" width="40" height="170" fill="transparent" class="hover-trigger" (mouseenter)="showSalesTooltip(1)" (mouseleave)="hideSalesTooltip()" />
+            <rect x="196" y="20" width="40" height="170" fill="transparent" class="hover-trigger" (mouseenter)="showSalesTooltip(2)" (mouseleave)="hideSalesTooltip()" />
+            <rect x="280" y="20" width="40" height="170" fill="transparent" class="hover-trigger" (mouseenter)="showSalesTooltip(3)" (mouseleave)="hideSalesTooltip()" />
+            <rect x="363" y="20" width="40" height="170" fill="transparent" class="hover-trigger" (mouseenter)="showSalesTooltip(4)" (mouseleave)="hideSalesTooltip()" />
+            <rect x="446" y="20" width="40" height="170" fill="transparent" class="hover-trigger" (mouseenter)="showSalesTooltip(5)" (mouseleave)="hideSalesTooltip()" />
+            <rect x="530" y="20" width="40" height="170" fill="transparent" class="hover-trigger" (mouseenter)="showSalesTooltip(6)" (mouseleave)="hideSalesTooltip()" />
+            
+            <!-- X Axis Labels -->
+            <text x="50" y="205" text-anchor="middle" class="axis-label">12 AM</text>
+            <text x="133" y="205" text-anchor="middle" class="axis-label">4 AM</text>
+            <text x="216" y="205" text-anchor="middle" class="axis-label">8 AM</text>
+            <text x="300" y="205" text-anchor="middle" class="axis-label">12 PM</text>
+            <text x="383" y="205" text-anchor="middle" class="axis-label">4 PM</text>
+            <text x="466" y="205" text-anchor="middle" class="axis-label">8 PM</text>
+            <text x="550" y="205" text-anchor="middle" class="axis-label">12 AM</text>
+          </svg>
+          
+          <!-- Sales Tooltip -->
+          <div class="chart-tooltip" *ngIf="hoveredSalesIndex !== null" 
+               [style.left.px]="hoveredSalesIndex * 83 + 30" 
+               [style.top.px]="50">
+            <span class="time">{{ hoveredSalesTime }}</span>
+            <span class="val">₹{{ hoveredSalesValue | number }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Inventory Donut Chart -->
+    <div class="chart-container inventory-status">
+      <div class="chart-header">
+        <h4>Inventory Status</h4>
+        <div class="time-range">Real-time</div>
+      </div>
+      
+      <div class="chart-body donut-body">
+        <div class="donut-wrapper">
+          <div class="donut-chart" [style.background]="getConicGradient()">
+            <div class="donut-mask">
+              <span class="pct">{{ inStockPct }}%</span>
+              <span class="lbl">In Stock</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="donut-legend">
+          <div class="legend-item">
+            <span class="dot instock"></span>
+            <span class="lbl">In Stock</span>
+            <span class="val">{{ inStockPct }}%</span>
+          </div>
+          <div class="legend-item">
+            <span class="dot lowstock"></span>
+            <span class="lbl">Low Stock</span>
+            <span class="val">{{ lowStockPct }}%</span>
+          </div>
+          <div class="legend-item">
+            <span class="dot outofstock"></span>
+            <span class="lbl">Out of Stock</span>
+            <span class="val">{{ outOfStockPct }}%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Lists Row -->
+  <section class="dashboard__lists">
+    <!-- Recent Price Changes -->
+    <div class="list-card price-changes">
+      <div class="list-header">
+        <h4>Recent Price Changes</h4>
+        <a routerLink="/alerts" class="view-all">Configure Autopilot</a>
+      </div>
+      
+      <div class="list-body">
+        <div class="empty-state" *ngIf="priceDecisions.length === 0">
+          No pricing updates recorded yet.
+        </div>
+        
+        <table class="activity-table" *ngIf="priceDecisions.length > 0">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Price Shift</th>
+              <th>Trigger Type</th>
+              <th>Time</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let dec of priceDecisions.slice(0, 5)">
+              <td>
+                <div class="prod-cell">
+                  <span class="prod-name">{{ dec.sku === 'PROD-001' ? 'Milk' : dec.sku === 'PROD-002' ? 'Rice' : dec.sku === 'PROD-003' ? 'Coke' : dec.sku === 'PROD-004' ? 'Bread' : 'Soap' }}</span>
+                  <span class="prod-sku">{{ dec.sku }}</span>
+                </div>
+              </td>
+              <td>
+                <div class="price-shift">
+                  <span class="old-price">₹{{ dec.oldPrice }}</span>
+                  <span class="arrow">→</span>
+                  <span class="new-price">₹{{ dec.newPrice }}</span>
+                </div>
+              </td>
+              <td>
+                <span class="signal-badge">{{ dec.demandSignal }}</span>
+              </td>
+              <td>
+                <span class="time">{{ dec.timestamp | date:'shortTime' }}</span>
+              </td>
+              <td>
+                <span class="status-badge" [class.up]="dec.newPrice > dec.oldPrice" [class.down]="dec.newPrice < dec.oldPrice">
+                  {{ dec.newPrice > dec.oldPrice ? 'Increased' : 'Decreased' }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Top Selling Products -->
+    <div class="list-card top-selling">
+      <div class="list-header">
+        <h4>Top Selling Products</h4>
+        <a routerLink="/inventory" class="view-all">View Products</a>
+      </div>
+      
+      <div class="list-body">
+        <ul class="selling-list">
+          <li *ngFor="let item of topSelling; let i = index">
+            <div class="rank">{{ i + 1 }}</div>
+            <div class="item-info">
+              <span class="name">{{ item.name }}</span>
+              <span class="category">{{ item.category }}</span>
+            </div>
+            <div class="item-sales">
+              <span class="qty">{{ item.units }} units</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Modal overlays -->
+  <div class="modal-overlay" *ngIf="activeModal !== null" (click)="closeModal()">
+    <!-- Modal Products -->
+    <div class="modal-card" *ngIf="activeModal === 'products'" (click)="$event.stopPropagation()">
+      <div class="modal-card__header">
+        <h4>All Products Catalog ({{ products.length }})</h4>
+        <button class="btn-close" (click)="closeModal()">×</button>
+      </div>
+      <div class="modal-card__body">
+        <table class="modal-table">
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Product Name</th>
+              <th>Category</th>
+              <th class="text-right">Price</th>
+              <th class="text-right">Stock</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let p of products">
+              <td class="font-mono">{{ p.sku }}</td>
+              <td><strong>{{ p.productName }}</strong></td>
+              <td><span class="category-badge">{{ p.category }}</span></td>
+              <td class="text-right">₹{{ p.currentPrice }}</td>
+              <td class="text-right font-semibold" [class.red-text]="p.stock <= p.reorderThreshold">{{ p.stock }} units</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Modal Sales -->
+    <div class="modal-card" *ngIf="activeModal === 'sales'" (click)="$event.stopPropagation()">
+      <div class="modal-card__header">
+        <h4>Today's Sales Breakdown</h4>
+        <button class="btn-close" (click)="closeModal()">×</button>
+      </div>
+      <div class="modal-card__body">
+        <div class="sales-total-box">
+          <span>Gross Estimated Revenue</span>
+          <h2>₹{{ todaySales | number }}</h2>
+        </div>
+        <table class="modal-table">
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th class="text-right">Estimated Share</th>
+              <th class="text-right">Total Sales Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let s of getCategorySales()">
+              <td>
+                <div class="cat-indicator">
+                  <span class="color-dot" [style.background-color]="s.color"></span>
+                  <strong>{{ s.category }}</strong>
+                </div>
+              </td>
+              <td class="text-right font-semibold">{{ s.percentage }}%</td>
+              <td class="text-right font-semibold">₹{{ s.value | number }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Modal Alerts -->
+    <div class="modal-card" *ngIf="activeModal === 'alerts'" (click)="$event.stopPropagation()">
+      <div class="modal-card__header">
+        <h4>Active Stock Alerts ({{ getLowStockProducts().length }})</h4>
+        <button class="btn-close" (click)="closeModal()">×</button>
+      </div>
+      <div class="modal-card__body">
+        <div class="empty-alerts" *ngIf="getLowStockProducts().length === 0">
+          No warnings! All products are adequately stocked.
+        </div>
+        <table class="modal-table" *ngIf="getLowStockProducts().length > 0">
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Product Name</th>
+              <th class="text-right">Current Stock</th>
+              <th class="text-right">Threshold</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let p of getLowStockProducts()">
+              <td class="font-mono">{{ p.sku }}</td>
+              <td><strong>{{ p.productName }}</strong></td>
+              <td class="text-right font-semibold red-text">{{ p.stock }} units</td>
+              <td class="text-right">{{ p.reorderThreshold }} units</td>
+              <td>
+                <span class="alert-status-badge">{{ p.stock === 0 ? 'OUT OF STOCK' : 'LOW STOCK' }}</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Modal Pricing -->
+    <div class="modal-card" *ngIf="activeModal === 'pricing'" (click)="$event.stopPropagation()">
+      <div class="modal-card__header">
+        <h4>AI Autonomous Price History</h4>
+        <button class="btn-close" (click)="closeModal()">×</button>
+      </div>
+      <div class="modal-card__body">
+        <div class="empty-state" *ngIf="priceDecisions.length === 0">
+          No AI updates recorded.
+        </div>
+        <table class="modal-table" *ngIf="priceDecisions.length > 0">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Price Update</th>
+              <th>Trigger Type</th>
+              <th>Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let dec of priceDecisions">
+              <td>
+                <strong>{{ getProductNameBySku(dec.sku) }}</strong>
+                <div class="font-mono text-xs text-slate" style="font-size: 11px; color: #7f8c8d;">{{ dec.sku }}</div>
+              </td>
+              <td>
+                <div class="price-flow" style="font-weight: 700; color: #2c3e50;">₹{{ dec.oldPrice }} → ₹{{ dec.newPrice }}</div>
+              </td>
+              <td>
+                <span class="trigger-label" style="background: #f1f3f7; color: #7f8c8d; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">{{ dec.demandSignal }}</span>
+              </td>
+              <td class="justification-text" style="font-size: 11px; color: #555; line-height: 1.4;">{{ dec.justification }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

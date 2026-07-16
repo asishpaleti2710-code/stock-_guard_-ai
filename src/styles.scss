@@ -1,0 +1,119 @@
+/* Global styles */
+
+/* Flat modern e-commerce card style (Blinkit Vibes) */
+.queue-card, 
+.console-card, 
+.po-review-card, 
+.kpi-card, 
+.chart-container, 
+.product-card, 
+.detail-card, 
+.filter-card, 
+.settings-card, 
+.logs-card, 
+.table-card, 
+.autopilot-card, 
+.summary-card, 
+.po-table-card,
+.card,
+.control-panel,
+.active-simulation-card,
+.quick-action-card,
+.stoksy-panel {
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03) !important;
+}
+
+/* Enforce black/dark charcoal font colors inside cards for high contrast */
+.queue-card, 
+.console-card, 
+.po-review-card, 
+.kpi-card, 
+.chart-container, 
+.product-card, 
+.detail-card, 
+.filter-card, 
+.settings-card, 
+.logs-card, 
+.table-card, 
+.autopilot-card, 
+.summary-card, 
+.po-table-card,
+.card,
+.control-panel,
+.active-simulation-card,
+.quick-action-card,
+.stoksy-panel {
+  color: #1e293b;
+  
+  h1, h2, h3, h4, h5, h6 {
+    color: #000000 !important;
+  }
+  
+  /* Inputs, labels, and textareas must remain black/dark */
+  label, input, select, textarea {
+    color: #000000 !important;
+  }
+
+  p {
+    color: #475569;
+  }
+}
+
+/* Blinkit Green Primary Buttons overrides */
+.btn-restock, 
+.btn-approve-restock, 
+.btn-primary, 
+button.btn-primary, 
+button.btn-restock, 
+.btn-submit, 
+.btn-confirm,
+.btn-suggest {
+  background: #0c8040 !important; /* Blinkit Green */
+  color: #ffffff !important;
+  border-radius: 20px !important; /* Rounded friendly button */
+  font-weight: 700 !important;
+  box-shadow: 0 4px 12px rgba(12, 128, 64, 0.15) !important;
+  border: none !important;
+  transition: all 0.2s !important;
+  
+  &:hover {
+    background: #096332 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 16px rgba(12, 128, 64, 0.25) !important;
+  }
+}
+
+/* Clear console button */
+.btn-clear {
+  color: #ef4444 !important;
+  font-weight: 700 !important;
+}
+
+/* Page Titles and Subtitles - Dark color for light background */
+.title-section h1, .header-title h1 {
+  color: #000000 !important;
+  text-shadow: none !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.02em !important;
+  font-family: 'Outfit', 'Inter', -apple-system, sans-serif !important;
+}
+.title-section p, .header-title .subtitle {
+  color: #475569 !important;
+  text-shadow: none !important;
+  font-weight: 500 !important;
+}
+
+/* Ensure absolute backgrounds in app-shell do not overlap content pointer clicks */
+.restocking-page, 
+.dashboard, 
+.inventory-container, 
+.purchase-requests-page, 
+.alerts-page {
+  position: relative;
+  z-index: 1;
+}
